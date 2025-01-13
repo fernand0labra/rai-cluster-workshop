@@ -51,10 +51,10 @@ SLURM provides three main functions:
 Jobs and the resources associated are requested and controlled through the following commands. The job.sh file contains all the specifications for the allocation and the programs to be executed.
 
 ```
-sbatch job.sh					        # Submit a job
-squeue -u USERNAME -j JOBID  	# Job status
-scontrol show job JOBID			  # Job information
-scancel JOBID					        # Cancel a job
+sbatch job.sh                  # Submit a job
+squeue -u USERNAME -j JOBID    # Job status
+scontrol show job JOBID        # Job information
+scancel JOBID                  # Cancel a job
 ```
 
 SLURM directives in job scripts are prefixed with **#SBATCH**, while general comments are prefixed with **#**. This system enables efficient resource utilization and streamlined job execution on high-performance computing systems.
