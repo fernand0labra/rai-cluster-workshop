@@ -3,7 +3,6 @@
 This repository contains code and job scripts with examples on **(1)** single-machine multi-gpu and **(2)** cluster deployment, showcasing the necessary code changes in Pytorch and Tensorflow frameworks for distributed NN training. Moreover, the repository contains guidelines for the deployment of SLURM job scripts.
 
 ## Table of Contents
-1. [
 1. [About Multi-node Computation](#about-multi-node-computation)
 2. [HPC2N & Alvis](#hpc2n-alvis)
 3. [Theoretical Background](#cluster-resource-allocation)
