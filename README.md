@@ -1,4 +1,4 @@
-# Cluster Deployment Guidelines
+# HPC Cluster Deployment Guidelines
 
 This repository contains code and job scripts with examples on **(1)** single-machine multi-gpu and **(2)** cluster deployment, showcasing the necessary code changes in Pytorch and Tensorflow frameworks for distributed NN training. Moreover, the repository contains guidelines for the deployment of SLURM job scripts.
 
