@@ -9,14 +9,14 @@ More examples and information on distributed execution can be found on: https://
    * [About HPC Clusters](#about-hpc-clusters)
    * [HPC2N & Alvis](#hpc2n--alvis)
    * [Cluster Resource Allocation](#cluster-resource-allocation)
-2. [Code Migration & Dependencies](#code-migration-dependencies)
-   * [About Proprietary Code](#about-code-migration)
+2. [Code Migration & Dependencies](#code-migration--dependencies)
+   * [About Proprietary Code](#about-proprietary-code)
    * [Modules System](#modules-system)
    * [Singularity/Apptainer](#singularityapptainer)
 3. [Multi-GPU/Multi-Node Training](#multi-gpumulti-node-training)
    * [SLURM Workload Manager](#slurm-workload-manager)
-   * [Multi-GPU Code Adaptation](#multi-gpu-adaptation)
-   * [Multi-Node Code Adaptation](#multi-node-adaptation)
+   * [Multi-GPU Code Adaptation](#multi-gpu-code-adaptation)
+   * [Multi-Node Code Adaptation](#multi-node-code-adaptation)
 4. [Visual Applications with ComputeNode Desktop OnDemand](#visual-applications-with-computenode-desktop-ondemand)
    * [Desktop OnDemand Platform](#desktop-ondemand-platform)
    * [Visual Applications](#visual-applications)
@@ -33,7 +33,6 @@ A computer cluster consists of multiple computers (nodes) connected via high-spe
 A node is an individual computer within a cluster, typically containing one or more CPUs (with multiple cores) and possibly GPUs. While memory is shared between cores within the same CPU, it is not shared across different nodes.
 
 Jobs on a cluster are managed through a batch system. Users log in to a "login node" and submit job scripts, which specify requirements like the number of nodes, CPUs, GPUs, memory, runtime, and input data. These scripts enable non-interactive job execution, ideal for resource-intensive tasks that run without user interaction.
-
 
 ### HPC2N & Alvis
 
@@ -58,6 +57,50 @@ srun --ntasks 2 python program.py <ARGS>
 ```
 
 
+
+## Code Migration & Dependencies
+
+### About Proprietary Code
+In order for your personal code to be run in a compute node, it is necessary to allocate the computing resources as well as locate the terminal in the same folder as your main file. Dependencies can be then loaded through the modules system by using the job allocation script format or by bundling them in a container and running the main file.
+
+If modules that are not installed in the system or need to be modified have to be included, then the modules need to be located in the same folder as the main file. However, the dependencies of the modules (e.g. requirements.txt) have to be imported from one of the previously mentioned options.
+
+```
+├── module_1
+├── module_2
+├── ...
+└── main.py   -> import module_1 as m1; import module_2 as m2
+```
+
+ABOUT STORAGE (e.g. WinSCP)
+
+### Modules System
+
+In high-performance computation, a module system functions as an organized toolbox for software and tools. It enables us to easily access, load, and manage different software packages, compilers, and libraries needed for specific computing tasks. By segregating software environments, we can prevent conflicts and customize setups according to task requirements.
+
+```
+module spider MODULE
+module list
+```
+
+### Singularity/Apptainer
+
+Apptainer is a container platform. It allows you to create and run containers that package up pieces of software in a way that is portable and reproducible. You can build a container using Apptainer on your laptop, and then run it on many of the largest HPC clusters in the world, local university or company clusters, a single server, in the cloud, or on a workstation down the hall. Your container is a single file, and you don’t have to worry about how to install all the software you need on each different operating system.
+
+```
+apptainer build image.sif image.def
+apptainer exec --nv image.sif COMMAND
+
+# Include different options
+```
+
+https://github.com/c3se/containers
+https://catalog.ngc.nvidia.com
+https://hub.docker.com
+
+```
+EXAMPLE FILE
+```
 
 ## Multi-GPU/Multi-Node Training
 
@@ -113,6 +156,22 @@ The following directive allows the selection of the type of instance of the node
 ```
 #SBATCH --constraint=skylake  # HPC2N example
 ```
+
+### Multi-GPU Code Adaptation
+
+### Multi-Node Code Adaptation
+
+
+
+## Visual Applications with ComputeNode Desktop OnDemand
+
+### Desktop OnDemand Platform
+
+There are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will give you an interactive desktop session, the difference if it will be on a compute node where you can do some actual computations or if it is on a shared login node where you can need to refrain from heavy usage.
+
+### Visual Applications
+
+
 
 ## References
 
