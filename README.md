@@ -1,17 +1,32 @@
-# HPC Cluster Deployment Guidelines
+# HPC Cluster Workshop
 
 This repository contains code and job scripts with examples on **(1)** single-machine multi-gpu and **(2)** cluster deployment, showcasing the necessary code changes in Pytorch and Tensorflow frameworks for distributed NN training. Moreover, the repository contains guidelines for the deployment of SLURM job scripts.
 
 More examples and information on distributed execution can be found on: https://github.com/c3se/alvis-intro
 
 ## Table of Contents
-1. [About Multi-node Computation](#about-multi-node-computation)
-2. [HPC2N & Alvis](#hpc2n-alvis)
-3. [Theoretical Background](#cluster-resource-allocation)
-4. [SLURM Workload Manager](#slurm-workload-manager)
+1. [Introduction to HPC Clusters](#introduction-to-hpc-clusters)
+   * [About HPC Clusters](#about-hpc-clusters)
+   * [HPC2N & Alvis](#hpc2n--alvis)
+   * [Cluster Resource Allocation](#cluster-resource-allocation)
+2. [Code Migration & Dependencies](#code-migration-dependencies)
+   * [About Proprietary Code](#about-code-migration)
+   * [Modules System](#modules-system)
+   * [Singularity/Apptainer](#singularityapptainer)
+3. [Multi-GPU/Multi-Node Training](#multi-gpumulti-node-training)
+   * [SLURM Workload Manager](#slurm-workload-manager)
+   * [Multi-GPU Code Adaptation](#multi-gpu-adaptation)
+   * [Multi-Node Code Adaptation](#multi-node-adaptation)
+4. [Visual Applications with ComputeNode Desktop OnDemand](#visual-applications-with-computenode-desktop-ondemand)
+   * [Desktop OnDemand Platform](#desktop-ondemand-platform)
+   * [Visual Applications](#visual-applications)
 5. [References](#references)
 
-## About Multi-node Computation
+
+
+## Introduction to HPC Clusters
+
+### About HPC Clusters
 
 A computer cluster consists of multiple computers (nodes) connected via high-speed networks and working together as a single system. Clusters are cost-effective alternatives to large single computers, offering improved performance and availability.
 
@@ -20,7 +35,7 @@ A node is an individual computer within a cluster, typically containing one or m
 Jobs on a cluster are managed through a batch system. Users log in to a "login node" and submit job scripts, which specify requirements like the number of nodes, CPUs, GPUs, memory, runtime, and input data. These scripts enable non-interactive job execution, ideal for resource-intensive tasks that run without user interaction.
 
 
-## HPC2N & Alvis
+### HPC2N & Alvis
 
 There are two clusters available to the RAI group.
 
@@ -28,7 +43,7 @@ There are two clusters available to the RAI group.
 
 2. The Alvis cluster is a national NAISS resource dedicated for Artificial Intelligence and Machine Learning research. The system is built around Graphical Processing Units (GPUs) accelerator cards, and consists of several types of compute nodes with multiple NVIDIA GPUs.
 
-## Cluster Resource Allocation
+### Cluster Resource Allocation
 
 Batch or scheduling systems are essential for managing multi-user jobs on clusters or supercomputers. These systems track available resources, enforce usage policies, and schedule jobs efficiently by organizing them into priority queues. Jobs are submitted using job scripts, which specify resource requirements (e.g., nodes, cores, GPUs, memory) and include commands to execute tasks. Outputs and error logs are generated after job completion.
 
@@ -42,7 +57,11 @@ salloc  --account <your project> --nodes=1 --ntasks-per-node=4 --time=1:30:00
 srun --ntasks 2 python program.py <ARGS>
 ```
 
-## SLURM Workload Manager
+
+
+## Multi-GPU/Multi-Node Training
+
+### SLURM Workload Manager
 
 SLURM (Simple Linux Utility for Resource Management) is a widely used open-source job scheduling system for Linux and Unix-like environments. It plays a crucial role in managing resources and scheduling on clusters, including many supercomputers.
 
