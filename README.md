@@ -1,10 +1,8 @@
 # HPC Cluster Workshop
 
-This repository contains code and job scripts with examples on **(1)** single-machine multi-gpu and **(2)** cluster deployment, showcasing the necessary code changes in Pytorch and Tensorflow frameworks for distributed NN training. Moreover, the repository contains guidelines for the deployment of SLURM job scripts.
+This repository contains code and job scripts with examples on **(1)** single-machine multi-gpu and **(2)** cluster deployment, showcasing the necessary code changes in Pytorch framework for distributed NN training. Moreover, the repository contains guidelines for the deployment of SLURM job scripts.
 
 More examples and information on distributed execution can be found on: https://github.com/c3se/alvis-intro
-
-NOTE: The Tensorflow examples have not been tested
 
 ## Table of Contents
 1. [Introduction to HPC Clusters](#introduction-to-hpc-clusters)
