@@ -4,10 +4,13 @@ This repository contains code and job scripts with examples on **(1)** single-ma
 
 More examples and information on distributed execution can be found on: https://github.com/c3se/alvis-intro
 
+NOTE: The Tensorflow examples have not been tested
+
 ## Table of Contents
 1. [Introduction to HPC Clusters](#introduction-to-hpc-clusters)
    * [About HPC Clusters](#about-hpc-clusters)
    * [HPC2N & Alvis](#hpc2n--alvis)
+   * [Connecting to HPC Cluster](#connecting-to-hpc-cluster)
    * [Cluster Resource Allocation](#cluster-resource-allocation)
 2. [Code Migration & Dependencies](#code-migration--dependencies)
    * [About Proprietary Code](#about-proprietary-code)
@@ -42,6 +45,26 @@ There are two clusters available to the RAI group.
 
 2. The Alvis cluster is a national NAISS resource dedicated for Artificial Intelligence and Machine Learning research. The system is built around Graphical Processing Units (GPUs) accelerator cards, and consists of several types of compute nodes with multiple NVIDIA GPUs.
 
+### Connecting to HPC Cluster
+
+There are 3 primary options for connecting to the cluster environments, namely the [OpenOndemand](https://portal.c3se.chalmers.se/public/root/) portal, [Thinlinc](https://www.cendio.com/thinlinc/download/) connection to the login nodes or SSH access.
+
+The OpenOndemand option will be covered in [Visual Applications with ComputeNode Desktop OnDemand](#visual-applications-with-computenode-desktop-ondemand). Connecting with Thinlinc requires the installation of the software plus indicating server (*alvis1.c3se.chalmers.se*), username and password. SSH has a similar approach with the peculiarity of having to request TTY in order for the connection to be correctly setup.
+
+SSH is a straightforward option that will allow you to integrate the cluster workspace into e.g. Visual Studio Code and perform direct edition of the code within the login node. The terminal also allows any other operation such as requesting nodes or creating batch jobs.
+
+```
+ssh -t my_username@alvis1.c3se.chalmers.se
+
+************************ Expected entry (.ssh/config) ************************
+!! Remember to double check that the SSH entry has the following structure !!
+
+Host HPC-alvis  
+  HostName alvis1.c3se.chalmers.se
+  User my_username
+  RequestTTY yes
+```
+
 ### Cluster Resource Allocation
 
 Batch or scheduling systems are essential for managing multi-user jobs on clusters or supercomputers. These systems track available resources, enforce usage policies, and schedule jobs efficiently by organizing them into priority queues. Jobs are submitted using job scripts, which specify resource requirements (e.g., nodes, cores, GPUs, memory) and include commands to execute tasks. Outputs and error logs are generated after job completion.
@@ -61,7 +84,7 @@ srun --ntasks 2 python program.py <ARGS>
 ## Code Migration & Dependencies
 
 ### About Proprietary Code
-In order for your personal code to be run in a compute node, it is necessary to allocate the computing resources as well as locate the terminal in the same folder as your main file. Dependencies can be then loaded through the modules system by using the job allocation script format or by bundling them in a container and running the main file.
+In order for your personal code to be run in a compute node, it is necessary to allocate the computing resources. Dependencies can be then loaded through the modules system by using the job allocation script format or by bundling them in a container and running the main file.
 
 If modules that are not installed in the system or need to be modified have to be included, then the modules need to be located in the same folder as the main file. However, the dependencies of the modules (e.g. requirements.txt) have to be imported from one of the previously mentioned options.
 
@@ -72,34 +95,70 @@ If modules that are not installed in the system or need to be modified have to b
 └── main.py   -> import module_1 as m1; import module_2 as m2
 ```
 
-ABOUT STORAGE (e.g. WinSCP)
+It is possible to connect the login node with your local computer for file transfer through the SFTP/FTP protocol. For Linux users you can check the [scp command](https://linuxize.com/post/how-to-use-scp-command-to-securely-transfer-files/) and Windows users can work with [WinSCP](https://winscp.net/eng/index.php). Usage requires in both cases to indicate the server and the user that will be connected, then locate the desired files and transfer them from or to your local computer.
 
 ### Modules System
 
 In high-performance computation, a module system functions as an organized toolbox for software and tools. It enables us to easily access, load, and manage different software packages, compilers, and libraries needed for specific computing tasks. By segregating software environments, we can prevent conflicts and customize setups according to task requirements.
 
+Although one is not allowed to run any computation on the login nodes, it is possible to check the installed modules that exist in the HPC cluster and also list (if any) the loaded modules, which is much more relevant on compute nodes.
+
 ```
-module spider MODULE
-module list
+module spider MODULE  # Check if MODULE exists
+module list           # Check loaded modules
+```
+
+When the modules that are desired have been identified, they can be loaded within the allocated node (i.e. **salloc**) or indicated in the batch job script by executing the following line.
+
+```
+module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
 ```
 
 ### Singularity/Apptainer
 
 Apptainer is a container platform. It allows you to create and run containers that package up pieces of software in a way that is portable and reproducible. You can build a container using Apptainer on your laptop, and then run it on many of the largest HPC clusters in the world, local university or company clusters, a single server, in the cloud, or on a workstation down the hall. Your container is a single file, and you don’t have to worry about how to install all the software you need on each different operating system.
 
+The following commands indicate the general operations that can be performed through apptainer: building the image from a definition file, starting a terminal with the container dependencies and executing a specific command.
+
 ```
+# Build image .sif from definition .def
 apptainer build image.sif image.def
+
+# Connect to terminal with dependencies in environment
+apptainer shell --nv image.sif
+
+# Execute image .sif
 apptainer exec --nv image.sif COMMAND
 
-# Include different options
+# --nv                 interface cuda libraries between host and container (default)
+# -e                   remove environment variables from host machine
+# --env MY_VAR=values  define environment variables
+# --pwd DIR            define working environment
+# --bind source:end    bind local folder to container folder
 ```
 
-https://github.com/c3se/containers
-https://catalog.ngc.nvidia.com
-https://hub.docker.com
+The apptainer image definition files have a similar structure as those of Docker. For every existing Docker image, it is possible to extend dependencies or configuration during the appatiner building process.
+
+Existing apptainer images usable in the HPC clusters are available at [Alvis repository](https://github.com/c3se/containers), [NVIDIA catalog](https://catalog.ngc.nvidia.com) and [Docker Hub](https://hub.docker.com). The following example defines the container creation for a gazebo server, the **%files** section will copy any indicated files or directories from the localhost onto the container whereas the **%post** section will extend the initial image with the indicated dependencies and configurations.
 
 ```
-EXAMPLE FILE
+''' Apptainer Image Example file: image.def '''
+
+Bootstrap: docker
+From: gazebo:gzserver11
+
+%files
+    /mimer/NOBACKUP/groups/ltu-rai-rl2024/my_dir /mnt/my_dir
+    /mimer/NOBACKUP/groups/ltu-rai-rl2024/my_file.py /mnt/my_file.py
+
+%post
+    # Update locale
+    ln -fs /usr/share/zoneinfo/Europe/Oslo /etc/localtime
+
+    # Install dependencies (-y is mandatory to not break the build process)
+    apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y PACKAGE
 ```
 
 ## Multi-GPU/Multi-Node Training
@@ -121,6 +180,8 @@ sbatch job.sh                  # Submit a job
 squeue -u USERNAME -j JOBID    # Job status
 scontrol show job JOBID        # Job information
 scancel JOBID                  # Cancel a job
+
+!! Remember to cancel the running job before requesting a new one if the running job does not have your desired code or configuration !!
 ```
 
 SLURM directives in job scripts are prefixed with **#SBATCH**, while general comments are prefixed with **#**. This system enables efficient resource utilization and streamlined job execution on high-performance computing systems.
@@ -128,7 +189,7 @@ SLURM directives in job scripts are prefixed with **#SBATCH**, while general com
 ```
 ''' Job Script Example file: job.sh '''
 
-#SBATCH --account hpc2nXXXX-YYY         # The name of the account you are running in, mandatory.
+#SBATCH --account NAISSXXXX-YY-ZZZZ     # The name of the project you are running in, mandatory.
 #SBATCH --job-name my_job_name          # Give a sensible name for the job
 #SBATCH --time=00:15:00                 # Request runtime for the job (HHH:MM:SS)
 
