@@ -1,0 +1,2 @@
+Bootstrap: docker
+From: nvcr.io/nvidia/isaac-lab:2.0.1

@@ -1,0 +1,6 @@
+Bootstrap: docker
+From: gazebo:gzserver11
+
+%post
+    # Update locale
+    ln -fs /usr/share/zoneinfo/Europe/Oslo /etc/localtime
