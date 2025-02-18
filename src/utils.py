@@ -35,9 +35,9 @@ Common Pytorch Utilities (Dataset and Network Definition)
 
 def data():
     size = 1000
-    f = lambda x: 13*x**3 + 67*x**2 + 21*x + 5
-    x = torch.randn(size)
-    y = torch.tensor(map(f, x))
+    f = lambda x: x**3 + 13*x**2 + 21*x + 5
+    x = torch.linspace(0, 1, steps=size, dtype=torch.float32)
+    y = torch.tensor(list(map(f, x)))
     return x, y
 
 
@@ -57,11 +57,17 @@ class CustomNet(nn.Module):
 
     def __init__(self):
         super(CustomNet, self).__init__()
-        self.fc1 = nn.Linear(1, 5)
-        self.fc2 = nn.Linear(5, 5)
-        self.fc3 = nn.Linear(5, 1)
+        self.fc1 = nn.Linear(1, 4)
+        self.fc2 = nn.Linear(4, 8)
+        self.fc3 = nn.Linear(8, 16)
+        self.fc4 = nn.Linear(16, 8)
+        self.fc5 = nn.Linear(8, 4)
+        self.fc6 = nn.Linear(4, 1)
 
     def forward(self, input):
         f1 = F.relu(self.fc1(input))
         f2 = F.relu(self.fc2(f1))
-        return self.fc3(f2)
+        f3 = F.relu(self.fc3(f2))
+        f4 = F.relu(self.fc4(f3))
+        f5 = F.relu(self.fc5(f4))
+        return self.fc6(f5)
