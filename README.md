@@ -390,7 +390,7 @@ There are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will 
 
 ### Visual Applications
 
-
+https://portal.c3se.chalmers.se/public/root/
 
 ## References
 
