@@ -24,12 +24,13 @@ SOFTWARE.
 
 import os
 import torch
+import atexit
 import torch.nn.functional as F
 import torch.distributed as dist
 
 from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel
-from cluster.utils.torch import data, CustomDataset, CustomNet
+from utils import data, CustomDataset, CustomNet
 
 '''
 Multi-Node Pytorch Code Snippet (Data Parallelism)
@@ -45,34 +46,43 @@ https://pytorch-geometric.readthedocs.io/en/latest/tutorial/multi_node_multi_gpu
 '''
 
 
-def run(world_size: int, rank: int, local_rank:int, data: function):  # Each node process executes the run function
+def cleanup():
+    if dist.is_initialized():
+        print(f"Node {node}: Destroying process group.")
+        dist.destroy_process_group()
+
+def run(world_size: int, node: int, local_rank:int, data: tuple):  # Each node process executes the run function
 
     # Initialize distributed group (node n of N)
-    dist.init_process_group('nccl', world_size=world_size, rank=rank)
+    dist.init_process_group('nccl', world_size=world_size, rank=node)
 
-    dataset = data()
+    train_size = int(0.8 * data[0].__len__())          # Calculate nr of train samples
+    train_node_size = train_size // world_size      # Calculate nr of node samples
 
-    train_size = int(0.8 * data.__len__())          # Calculate nr of train samples
-    train_rank_size = train_size // world_size      # Calculate nr of rank samples
-
-    # Slice data by train_rank_size and initialize dataloader
-    train_data = CustomDataset(*dataset[rank * train_rank_size:(rank+1) * train_rank_size])
+    # Slice data by train_node_size and initialize dataloader
+    data_x, data_y = data[0], data[1]
+    data_range = node * train_node_size
+    
+    train_data = CustomDataset(data_x[data_range:data_range + train_node_size], 
+                               data_y[data_range:data_range + train_node_size])
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
     train_loader = DataLoader(
         train_data, 
         batch_size=train_data.__len__()//10, 
-        shuffle=True, 
-        sampler=None,
+        shuffle=False, 
+        sampler=train_sampler,
         batch_sampler=None, 
         num_workers=4
     )
 
-    if rank == 0:  # Validate data only on master node
-        val_data = CustomDataset(*dataset[train_size:])
+    if node == 0:  # Validate data only on master node
+        val_data = CustomDataset(data_x[train_size:], data_y[train_size:])
+        val_sampler = torch.utils.data.distributed.DistributedSampler(val_data)
         val_loader = DataLoader(
             val_data, 
             batch_size=val_data.__len__()//10, 
-            shuffle=True, 
-            sampler=None,
+            shuffle=False, 
+            sampler=val_sampler,
             batch_sampler=None, 
             num_workers=4
         )
@@ -81,49 +91,46 @@ def run(world_size: int, rank: int, local_rank:int, data: function):  # Each nod
     model = CustomNet().to(local_rank)                                  # Instantiate model
     model = DistributedDataParallel(model, device_ids=[local_rank])     # Initialize data parallelism (w/ replicated model)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)          # Instantiate optimizer
-
-    for epoch in range(1, 11):  # Train network
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)          # Instantiate optimizer
+    
+    for epoch in range(1, 21):  # Train network
         model.train()
         for batch in train_loader:
-            batch = batch.to(rank)
+            batch = [element.to(local_rank) for element in batch]
             optimizer.zero_grad()
-            out = model(batch.x, batch.edge_index)[:batch.batch_size]
-            loss = F.cross_entropy(out, batch.y[:batch.batch_size])     # Compute gradients and update parameters
+            out = model(batch[0].unsqueeze(1)).squeeze(1)
+            loss = F.mse_loss(out, batch[1])                            # Compute gradients and update parameters
             loss.backward()
             optimizer.step()
 
-        dist.barrier()  # Synchronize all processes by communication of gradients
+        if dist.is_initialized():
+            dist.barrier()          # Synchronize all processes by communication of gradients
 
-        if rank == 0:   # Output on master node
-            print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}')
+        if node == 0:   # Output on master node
+            print(f'Epoch: {epoch:02d}, MSE Loss: {loss:.4f}')
 
-        if rank == 0:   # Evaluate accuracy on master node
+        if node == 0:   # Evaluate accuracy on master node
             model.eval()
-            count = correct = 0
+            count = mse = 0
             with torch.no_grad():
                 for batch in val_loader:
-                    batch = batch.to(rank)
-                    out = model(batch.x, batch.edge_index)[:batch.batch_size]
-                    pred = out.argmax(dim=-1)
-                    correct += (pred == batch.y[:batch.batch_size]).sum()
-                    count += batch.batch_size
-            print(f'Validation Accuracy: {correct/count:.4f}')
+                    batch = [element.to(local_rank) for element in batch]
+                    out = model(batch[0].unsqueeze(1)).squeeze(1)
+                    mse += F.mse_loss(out, batch[1])
+                    count += batch[0].__len__()
+            print(f'Validation MSE: {mse/count:.4f}\n')
 
-        dist.barrier()
-
-    dist.destroy_process_group()  # Deinitizalize distributed group
-
+        if dist.is_initialized():
+            dist.barrier()
 
 if __name__ == '__main__':
-    
+    atexit.register(cleanup)
+
     # Get the world size from the WORLD_SIZE variable or directly from SLURM
     world_size = int(os.environ.get('WORLD_SIZE', os.environ.get('SLURM_NTASKS')))
-
-    # Likewise for RANK and LOCAL_RANK
-    rank = int(os.environ.get('RANK', os.environ.get('SLURM_PROCID')))
     local_rank = int(os.environ.get('LOCAL_RANK', os.environ.get('SLURM_LOCALID')))
-
+    node = int(os.environ.get('RANK', os.environ.get('SLURM_PROCID')))
     dataset = data()
+
     # SLURM will spawn the process 'run' on each node, passing a copy of the data and waiting for other processes to finish
-    run(world_size, rank, local_rank, dataset)
+    run(world_size, node, local_rank, dataset)
