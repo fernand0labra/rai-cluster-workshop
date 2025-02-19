@@ -198,13 +198,24 @@ SLURM directives in job scripts are prefixed with **#SBATCH**, while general com
 # ********************************************************************************************* #
 #SBATCH --ntasks 2                      # Number of workers (recommended 1 worker per GPU)
 #SBATCH --nodes 2                       # Number of nodes
-#SBATCH --gpus-per-node=v100:1          # Number of GPU cards needed per node
+#SBATCH --gpus-per-node=V100:1          # Number of GPU cards needed per node
 # ********************************************************************************************* #
 
 srun python program.py <ARGS>           # Run program on allocated resources
 ```
 
-GPU types include **v100**, **a40**, **a6000**, **l40s** and **h100**. When no GPU type is specified the scheduler will allocate any free GPU in the cluster. For more information read the clusters' documentation indicated in the references.
+GPU types include **T4**, **A40**, **V100**, **A100** and **A100fat**. When no GPU type is specified the scheduler will allocate any free GPU in the cluster. A more detailed display on GPU types for Alvis CS3E is shown below. For more information read the clusters' documentation indicated in the references.
+
+|                     |                   |                                |                         | 
+| :-                  | :-                | :-                             | :-                      | 
+| GPU Type            | VRAM              | System memory per GPU          | CPU cores per GPU       |
+| T4 | 16 GB | 72 or 192 GB | 4 | 
+| A40 | 48 GB | 64 GB | 16 | 
+| V100 | 32 GB | 192 or 384 GB | 8 | 
+| A100 | 40 GB | 64 or 128 GB | 16 | 
+| A100fat | 80 GB | 256 GB | 16 |  
+|                     |                   |                                |        
+
 
 The following directive allocates a node exclusively for a job even if there is enough resources for another job.
 ```
@@ -218,9 +229,158 @@ The following directive allows the selection of the type of instance of the node
 
 ### Multi-GPU Code Adaptation
 
+```
+# Obtain process number (given by torchrun, defaults to 0)
+rank = int(os.getenv("LOCAL_RANK", "0"))
+
+# Define span of processes as number of GPUs
+world_size = torch.cuda.device_count()
+
+...
+
+# Initiate distributed logic by indicating identity (rank) and span (world_size)
+# NCCL is the communication process used between processes (recommended)
+dist.init_process_group('nccl', rank=rank, world_size=world_size)
+
+...
+
+# Compute section of data to compute by process GPU
+train_rank_size = train_size // world_size
+data_range = rank * train_rank_size
+
+...
+
+# Instantiate model and move to specified GPU (rank)
+model = CustomNet().to(rank)
+
+# Wrap model for distributed data inference
+model = DistributedDataParallel(model, device_ids=[rank])
+
+...
+
+# Synchronize all processes by communication of gradients
+# Usage after each epoch of training and validation
+dist.barrier()
+
+...
+
+# When finishing the process, close distributed communication
+dist.destroy_process_group()
+```
+
+
+```
+sbatch job.standalone.sbatch
+
+---
+
+#SBATCH --ntasks 1                      # Number of workers (preferable to be same as number of GPUs i.e. 'nodes' x 'gpus-per-node')
+#SBATCH --nodes 1                       # Number of nodes
+#SBATCH --gpus-per-node=V100:2          # Number of GPU cards needed. Here asking for 2 V100 cards
+```
+
+```
+module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
+torchrun --standalone --nnodes=1 --nproc_per_node=2 src/standalone.py
+```
+
+```
+''' Apptainer definition file: apptainer.torch.def '''
+
+Bootstrap: docker
+From: pytorch/pytorch:2.1.2-cuda12.1-cudnn8-runtime
+```
+
+```
+# Build image from definition file
+apptainer build apptainer.torch.sif apptainer.torch.def
+
+---
+
+# Run apptainer image with specified command
+apptainer exec --nv apptainer/apptainer.torch.sif \
+    torchrun --standalone --nnodes=1 --nproc_per_node=2 src/standalone.py
+```
+
 ### Multi-Node Code Adaptation
 
 
+```
+# Obtain node number (given by torchrun, defaults to SLURM node number)
+node = int(os.environ.get('RANK', os.environ.get('SLURM_PROCID')))
+
+# Obtain process number (given by torchrun, defaults to SLURM process number)
+local_rank = int(os.environ.get('LOCAL_RANK', os.environ.get('SLURM_LOCALID')))
+
+# Define span of processes from SLURM tasks
+world_size = int(os.environ.get('WORLD_SIZE', os.environ.get('SLURM_NTASKS')))
+
+...
+
+# Initiate distributed logic by indicating identity (node) and span (world_size)
+# NCCL is the communication process used between processes (recommended)
+dist.init_process_group('nccl', rank=node, world_size=world_size)
+
+...
+
+# Compute section of data to compute by node
+train_node_size = train_size // world_size
+data_range = node * train_node_size
+
+...
+
+# Instantiate model and move to specified GPU (local_rank)
+model = CustomNet().to(local_rank)
+
+# Wrap model for distributed data inference
+model = DistributedDataParallel(model, device_ids=[local_rank])
+
+...
+
+# Synchronize all processes by communication of gradients
+# Usage after each epoch of training and validation
+dist.barrier()
+
+...
+
+# When finishing the process, close distributed communication
+dist.destroy_process_group()
+```
+
+```
+sbatch job.multiple.sbatch
+
+---
+
+#SBATCH --ntasks 2                      # Number of workers (preferable to be same as number of GPUs i.e. 'nodes' x 'gpus-per-node')
+#SBATCH --nodes 2                       # Number of nodes
+#SBATCH --gpus-per-node=V100:4          # Number of GPU cards needed. Here asking for 4 V100 cards
+```
+
+```
+module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
+mpirun -np 2 bash job.deploy.sh src/standalone.py
+```
+
+```
+# Run apptainer image with specified command
+module load OpenMPI/4.1.5-GCC-12.3.0
+mpirun -np 2 \
+   apptainer exec --nv apptainer/apptainer.torch.sif \
+       bash job.deploy.sh
+```
+
+```
+if [[ $MASTER = $HOST ]]; then
+   echo "$full_node is the master node (rank $RANK). Performing master-specific tasks..."
+   python3 -m torch.distributed.run --nproc_per_node=1 --nnodes=2 --node_rank=0 --rdzv_id=123 --rdzv_backend=c10d --rdzv_endpoint=localhost:12345 src/multiple.py
+   break
+elif [[ $full_node = $HOST ]]; then
+   echo "$full_node is a worker node (rank $RANK). Performing worker-specific tasks..."
+   python3 -m torch.distributed.run --nproc_per_node=1 --nnodes=2 --node_rank=$RANK --rdzv_id=123 --rdzv_backend=c10d --rdzv_endpoint=$MASTER:12345 src/multiple.py
+   break
+fi
+```
 
 ## Visual Applications with ComputeNode Desktop OnDemand
 
