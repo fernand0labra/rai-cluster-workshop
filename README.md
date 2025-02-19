@@ -408,7 +408,21 @@ fi
 
 There are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will give you an interactive desktop session, the difference if it will be on a compute node where you can do some actual computations or if it is on a shared login node where you can need to refrain from heavy usage.
 
+<table>
+<tr>
+<td><img src="docs/allocate-gui.jpg"/></td>
+<td><img src="docs/interactive-sessions.jpg"/></td>
+</tr>
+</table>
+
 ### Visual Applications
+
+<table>
+<tr>
+<td><img src="docs/gazebo-willowgarage.jpg"/></td>
+<td><img src="docs/matlab.png"/></td>
+</tr>
+</table>
 
 https://portal.c3se.chalmers.se/public/root/
 
