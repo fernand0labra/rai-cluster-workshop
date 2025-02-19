@@ -45,7 +45,7 @@ There are two clusters available to the RAI group.
 
 ### Connecting to HPC Cluster
 
-There are 3 primary options for connecting to the cluster environments, namely the [OpenOndemand](https://portal.c3se.chalmers.se/public/root/) portal, [Thinlinc](https://www.cendio.com/thinlinc/download/) connection to the login nodes or SSH access.
+There are 3 primary options for connecting to the cluster environments, namely the [OpenOndemand](https://portal.c3se.chalmers.se/public/root/) portal, [Thinlinc](https://www.cendio.com/thinlinc/download/) connection to the login nodes or SSH access. OpenOndemand and SSH require VPN connection to the university's network.
 
 The OpenOndemand option will be covered in [Visual Applications with ComputeNode Desktop OnDemand](#visual-applications-with-computenode-desktop-ondemand). Connecting with Thinlinc requires the installation of the software plus indicating server (*alvis1.c3se.chalmers.se*), username and password. SSH has a similar approach with the peculiarity of having to request TTY in order for the connection to be correctly setup.
 
@@ -229,6 +229,8 @@ The following directive allows the selection of the type of instance of the node
 
 ### Multi-GPU Code Adaptation
 
+In order to extend our current code to use Multi-GPU behavior, it is necessary to include some logic to distribute computation between processes and GPUs. In this example, two GPUs from one node are allocated and one process per GPU is spawned; performing training on partial sections of the data and sending/gathering the computed gradients to update the model.
+
 ```
 # Obtain process number (given by torchrun, defaults to 0)
 rank = int(os.getenv("LOCAL_RANK", "0"))
@@ -268,6 +270,7 @@ dist.barrier()
 dist.destroy_process_group()
 ```
 
+This code is launched from the **sbatch** utility for job allocation with the following configuration. There will be only 1 task associated to the single node as the distributed wrapper from torch will take care of the process creation. In the .sbatch file there are two options for the execution of the code, whether via the modules system or the apptainer container system.
 
 ```
 sbatch job.standalone.sbatch
@@ -279,10 +282,14 @@ sbatch job.standalone.sbatch
 #SBATCH --gpus-per-node=V100:2          # Number of GPU cards needed. Here asking for 2 V100 cards
 ```
 
+With the following option, the cluster modules system loads in the environment a specific package, namely a pytorch module with version 2.1.2 compiled with CUDA 12.1.1 . Afterwards, torchrun launches the distributed run by indicating the number of nodes and processes, as well as the main training file. The standalone flag considers server-client behavior to be contained in the same node, meaning that communication will be performed on a local basis.
+
 ```
 module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
 torchrun --standalone --nnodes=1 --nproc_per_node=2 src/standalone.py
 ```
+
+In a very similar way, the previous execution can be performed through a container. As shown below, **apptainer.torch.def** indicates that from DockerHub the builder will select the container image that has specifically the same torch and CUDA versions as the modules counterpart.
 
 ```
 ''' Apptainer definition file: apptainer.torch.def '''
@@ -290,6 +297,8 @@ torchrun --standalone --nnodes=1 --nproc_per_node=2 src/standalone.py
 Bootstrap: docker
 From: pytorch/pytorch:2.1.2-cuda12.1-cudnn8-runtime
 ```
+
+The image is built by indicating the definition file and output file names. Afterwards, the execution can be done through the **apptainer exec** command, wrapping the same command that was used before. This procedure associates the execution environment defined in the container for the local file and its dependencies.
 
 ```
 # Build image from definition file
