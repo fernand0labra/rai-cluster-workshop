@@ -24,6 +24,7 @@ SOFTWARE.
 
 import os
 import torch
+import atexit
 import torch.nn.functional as F
 import torch.distributed as dist
 import torch.multiprocessing as mp
@@ -43,7 +44,13 @@ https://pytorch-geometric.readthedocs.io/en/latest/tutorial/multi_gpu_vanilla.ht
 '''
 
 
+def cleanup():
+    if dist.is_initialized():
+        print(f"Process {rank}: Destroying process group.")
+        dist.destroy_process_group()
+
 def run(rank: int, world_size: int, data: tuple):  # Each node process executes the run function
+    
     # Initialize distributed group (node n of N)
     dist.init_process_group('nccl', rank=rank, world_size=world_size)
 
@@ -80,7 +87,7 @@ def run(rank: int, world_size: int, data: tuple):  # Each node process executes 
     model = CustomNet().to(rank)                                # Instantiate model
     model = DistributedDataParallel(model, device_ids=[rank])   # Initialize data parallelism (w/ replicated model)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)  # Instantiate optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)   # Instantiate optimizer
 
     for epoch in range(1, 21):  # Train network
         model.train()
@@ -88,11 +95,12 @@ def run(rank: int, world_size: int, data: tuple):  # Each node process executes 
             batch = [element.to(rank) for element in batch]
             optimizer.zero_grad()
             out = model(batch[0].unsqueeze(1)).squeeze(1)
-            loss = F.mse_loss(out, batch[1])  # Compute gradients and update parameters
+            loss = F.mse_loss(out, batch[1])                    # Compute gradients and update parameters
             loss.backward()
             optimizer.step()
 
-        dist.barrier()  # Synchronize all processes by communication of gradients
+        if dist.is_initialized():
+            dist.barrier()  # Synchronize all processes by communication of gradients
 
         if rank == 0:   # Output on master node
             print(f'Epoch: {epoch:02d}, MSE Loss: {loss:.4f}')
@@ -108,12 +116,13 @@ def run(rank: int, world_size: int, data: tuple):  # Each node process executes 
                     count += batch[0].__len__()
             print(f'Validation MSE: {mse/count:.4f} \n')
 
-        dist.barrier()
-
-    dist.destroy_process_group()  # Deinitizalize distributed group
+        if dist.is_initialized():
+            dist.barrier()
 
 
 if __name__ == '__main__':
+    atexit.register(cleanup)
+
     rank = int(os.getenv("LOCAL_RANK", "0"))
     world_size = torch.cuda.device_count()  # As many nodes as GPUs
     dataset = data()

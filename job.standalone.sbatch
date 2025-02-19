@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account NAISS2024-22-1107     # The name of the account you are running in, mandatory.
+#SBATCH --account NAISS2024-5-442       # The name of the account you are running in, mandatory.
 #SBATCH --job-name multi_gpu_test       # Give a sensible name for the job
 #SBATCH --time=00:05:00                 # Request runtime for the job (HHH:MM:SS) where 168 hours is the maximum
 
@@ -13,12 +13,10 @@
 
 
 ## MODULE SYSTEM VERSION
-
-module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1                                  # Load modules
-torchrun --standalone --nnodes=1 --nproc_per_node=2 src/multi-gpu-torch.py        # Spawn processes according to SBATCH specification
+# module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1                                  # Load modules
+# torchrun --standalone --nnodes=1 --nproc_per_node=2 src/standalone.py             # Spawn processes according to SBATCH specification
 
 
 ## CONTAINER VERSION
-
 apptainer exec --nv apptainer/apptainer.torch.sif \
-    torchrun --standalone --nnodes=1 --nproc_per_node=2 src/multi-gpu-torch.py
+    torchrun --standalone --nnodes=1 --nproc_per_node=2 src/standalone.py
