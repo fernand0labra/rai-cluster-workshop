@@ -229,7 +229,7 @@ The following directive allows the selection of the type of instance of the node
 
 ### Multi-GPU Code Adaptation
 
-In order to extend our current code to use Multi-GPU behavior, it is necessary to include some logic to distribute computation between processes and GPUs. In this example, two GPUs from one node are allocated and one process per GPU is spawned; performing training on partial sections of the data and sending/gathering the computed gradients to update the model.
+In order to extend any code to use Multi-GPU behavior, it is necessary to include some logic to distribute computation between processes and GPUs. In this example, two GPUs from one node are allocated and one process per GPU is spawned; performing training on partial sections of the data and sending/gathering the computed gradients to update the model.
 
 ```
 # Obtain process number (given by torchrun, defaults to 0)
