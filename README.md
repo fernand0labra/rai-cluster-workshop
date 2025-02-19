@@ -313,6 +313,7 @@ apptainer exec --nv apptainer/apptainer.torch.sif \
 
 ### Multi-Node Code Adaptation
 
+In a similar way as the Multi-GPU case, it is necessary to include some logic to distribute computation between nodes. In this example, two nodes with one GPU each are allocated and one process per GPU is spawned. Some elements such as the communication and gradient sharing need to be performed on the node level (rank), whereas the model training needs to be taken into account on the process scope (local_rank).
 
 ```
 # Obtain node number (given by torchrun, defaults to SLURM node number)
@@ -356,6 +357,8 @@ dist.barrier()
 dist.destroy_process_group()
 ```
 
+Once more, the resources are requested through **sbatch**. In HPC2N Kebnekaise, node sharing allows to use 1 GPU from as many different machines as possible. However, in Alvis CS3E this behavior is not implemented and the only possibility is to allocate the full node; for this reason the *--gpus-per-node* flag indicates 4 GPUs per node even if the example uses only one GPU per node.
+
 ```
 sbatch job.multiple.sbatch
 
@@ -366,10 +369,14 @@ sbatch job.multiple.sbatch
 #SBATCH --gpus-per-node=V100:4          # Number of GPU cards needed. Here asking for 4 V100 cards
 ```
 
+Multi-node behavior needs to use the **mpirun** tool from OpenMPI; which offers the logic, control and communication necessary to have an execution distributed onto several nodes. In the following module systems' example, the tool instantiates 2 processes that will run each the deploy.sh bash script.
+
 ```
 module load PyTorch/2.1.2-foss-2023a-CUDA-12.1.1
-mpirun -np 2 bash job.deploy.sh src/standalone.py
+mpirun -np 2 bash job.deploy.sh
 ```
+
+In a similar way the containerized version can be run: After loading the OpenMPI module, the container is used parallely to define for each node process the same dependencies' environment.
 
 ```
 # Run apptainer image with specified command
@@ -378,6 +385,10 @@ mpirun -np 2 \
    apptainer exec --nv apptainer/apptainer.torch.sif \
        bash job.deploy.sh
 ```
+
+The **deploy.sh** bash script reads environment variables such as the host or the SLURM node list to create a list of nodes e.g. *'alvis-13, alvis-14'*. Afterwards, each node is contrasted against the master node's name (selected as the first node on the list) and the hostname. In this way, each process running on each node will only execute once and specifically the line that should be associated (master or worker).
+
+In this example, **torch.distributed.run** is used which is an older version of torchrun but provides the same functionality. The *node_rank* indicates the ID of the node that is running the process and the *rdvz* flags (which are defaulted on standalone) indicate the master/worker behavior needed in the distributed execution. This is specially noticeable on *rdvz_endpoint* where on the master is *localhost:12345* whereas on each worker will be *$MASTER* or *alvis-13:12345* according to the example node list.
 
 ```
 if [[ $MASTER = $HOST ]]; then
