@@ -23,8 +23,6 @@ More examples and information on distributed execution can be found on: https://
    * [Visual Applications](#visual-applications)
 5. [References](#references)
 
-
-
 ## Introduction to HPC Clusters
 
 ### About HPC Clusters
@@ -406,7 +404,9 @@ fi
 
 ### Desktop OnDemand Platform
 
-There are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will give you an interactive desktop session, the difference if it will be on a compute node where you can do some actual computations or if it is on a shared login node where you can need to refrain from heavy usage.
+In [Desktop OnDemand](https://portal.c3se.chalmers.se/public/root/) there are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will give you an interactive desktop session, however the compute node allows some actual computations whereas the shared login node allows small tests or builds. The interactive sessions platform as shown in the left image, provides a selection of time and resources to the instantiated desktop instance. Once the instance is created, selection on compression and image quality is available to facilitate low-bandwith connections. 
+
+It is recommended to select one of the lower cost GPUs such as T4s but usually V100s are the most available. When leaving the OnDemand webpage, remember to logout so that the session is finished and only the exact amount of time used is drawn.
 
 <table>
 <tr>
@@ -417,14 +417,30 @@ There are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will 
 
 ### Visual Applications
 
+There is a myriad of available graphical applications for use within the desktop instance: examples include Matlab, R or Jupyter Notebooks. However, if a different non-installed graphical application is needed, it is possible to use apptainer to run whichever software. In the left image example, gazebo is instantiated from terminal by running a container which is built upon the gazebo11 server docker image.
+
+```
+''' Apptainer definition file: apptainer.gazebo.def '''
+
+Bootstrap: docker
+From: gazebo:gzserver11
+
+%post
+    # Update locale
+    ln -fs /usr/share/zoneinfo/Europe/Oslo /etc/localtime
+
+---
+
+apptainer build apptainer.gazebo.sif apptainer.gazebo.def
+apptainer exec --nv apptainer.gazebo.sif gazebo worlds/willowgarage.world
+```
+
 <table>
 <tr>
 <td><img src="docs/gazebo-willowgarage.jpg"/></td>
 <td><img src="docs/matlab.png"/></td>
 </tr>
 </table>
-
-https://portal.c3se.chalmers.se/public/root/
 
 ## References
 
