@@ -74,7 +74,7 @@ salloc  --account <your project> --nodes=1 --ntasks-per-node=4 --time=1:30:00
 # You must use srun to run your job on the allocated resources
 srun --ntasks 2 python program.py <ARGS>
 ```
-
+Each project has a storage folder associated which is orders of magnitude bigger than the equivalent storage of the login or compute node. The path to this storage folder can be found in the project page of [NAISS SUPR](https://supr.naiss.se/project/) for each specific project, under the section Storage/Resource.
 
 
 ## Code Migration & Dependencies
@@ -404,7 +404,7 @@ fi
 
 ### Desktop OnDemand Platform
 
-In [Desktop OnDemand](https://portal.c3se.chalmers.se/public/root/) there are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will give you an interactive desktop session, however the compute node allows some actual computations whereas the shared login node allows small tests or builds. The interactive sessions platform as shown in the left image, provides a selection of time and resources to the instantiated desktop instance. Once the instance is created, selection on compression and image quality is available to facilitate low-bandwith connections. 
+In Desktop [Open OnDemand](https://portal.c3se.chalmers.se/public/root/) there are two desktop apps "Desktop (Compute)" and "Desktop (Login)". Both will give you an interactive desktop session, however the compute node allows some actual computations whereas the shared login node allows small tests or builds. The interactive sessions platform as shown in the left image, provides a selection of time and resources to the instantiated desktop instance. Once the instance is created, selection on compression and image quality is available to facilitate low-bandwith connections. 
 
 It is recommended to select one of the lower cost GPUs such as T4s but usually V100s are the most available. When leaving the OnDemand webpage, remember to logout so that the session is finished and only the exact amount of time used is drawn.
 
