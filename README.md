@@ -410,8 +410,8 @@ It is recommended to select one of the lower cost GPUs such as T4s but usually V
 
 <table>
 <tr>
-<td><img src="docs/allocate-gui.jpg"/></td>
-<td><img src="docs/interactive-sessions.jpg"/></td>
+<td><img src="docs/imgs/allocate-gui.jpg"/></td>
+<td><img src="docs/imgs/interactive-sessions.jpg"/></td>
 </tr>
 </table>
 
@@ -437,8 +437,8 @@ apptainer exec --nv apptainer.gazebo.sif gazebo worlds/willowgarage.world
 
 <table>
 <tr>
-<td><img src="docs/gazebo-willowgarage.jpg"/></td>
-<td><img src="docs/matlab.png"/></td>
+<td><img src="docs/imgs/gazebo-willowgarage.jpg"/></td>
+<td><img src="docs/imgs/matlab.png"/></td>
 </tr>
 </table>
 
