@@ -4,6 +4,8 @@ This repository contains information on HPC clusters, system configuration and j
 
 More examples and information on distributed execution can be found on the [Alvis Repository](https://github.com/c3se/alvis-intro)
 
+**NOTE: For any encountered errors or suggestions please open an [issue](https://github.com/fernand0labra/rai-cluster-workshop/issues) on this repository.**
+
 ## Table of Contents
 1. [Introduction to HPC Clusters](#introduction-to-hpc-clusters)
    * [About HPC Clusters](#about-hpc-clusters)
