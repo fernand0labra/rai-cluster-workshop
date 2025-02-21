@@ -246,9 +246,9 @@ dist.init_process_group('nccl', rank=rank, world_size=world_size)
 
 ...
 
-# Compute section of data to compute by process GPU
-train_rank_size = train_size // world_size
-data_range = rank * train_rank_size
+# Add distributed data behavior
+train_data = CustomDataset(data_x[:train_size], data_y[:train_size])
+train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
 
 ...
 
@@ -270,7 +270,7 @@ dist.barrier()
 dist.destroy_process_group()
 ```
 
-This code is launched from the **sbatch** utility for job allocation with the following configuration. There will be only 1 task associated to the single node as the distributed wrapper from torch will take care of the process creation. In the .sbatch file there are two options for the execution of the code, whether via the modules system or the apptainer container system.
+This code is launched from the **sbatch** utility for job allocation with the following configuration. There will be only 1 task associated to the single node as the distributed wrapper from torch will take care of the process creation. In the job.sbatch file there are two options for the execution of the code, whether via the modules system or the apptainer container system.
 
 ```
 sbatch job.standalone.sbatch
@@ -333,9 +333,9 @@ dist.init_process_group('nccl', rank=node, world_size=world_size)
 
 ...
 
-# Compute section of data to compute by node
-train_node_size = train_size // world_size
-data_range = node * train_node_size
+# Add distributed data behavior
+train_data = CustomDataset(data_x[:train_size], data_y[:train_size])
+train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
 
 ...
 
