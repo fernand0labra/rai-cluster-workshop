@@ -434,7 +434,7 @@ From: gazebo:gzserver11
 ---
 
 apptainer build apptainer.gazebo.sif apptainer.gazebo.def
-vglrun +v apptainer exec --nv apptainer.gazebo.sif gazebo worlds/willowgarage.world
+apptainer exec --nv apptainer.gazebo.sif gazebo worlds/willowgarage.world
 ```
 
 <table>
