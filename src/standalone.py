@@ -55,19 +55,15 @@ def run(rank: int, world_size: int, data: tuple):  # Each node process executes 
     dist.init_process_group('nccl', rank=rank, world_size=world_size)
 
     train_size = int(0.8 * data[0].__len__())       # Calculate nr of train samples
-    train_rank_size = train_size // world_size      # Calculate nr of rank samples
-
-    # Slice data by train_rank_size and initialize dataloader
     data_x, data_y = data[0], data[1]
-    data_range = rank * train_rank_size
     
-    train_data = CustomDataset(data_x[data_range:data_range + train_rank_size], 
-                               data_y[data_range:data_range + train_rank_size])
+    train_data = CustomDataset(data_x[:train_size], data_y[:train_size])
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
     train_loader = DataLoader(
         train_data, 
         batch_size=train_data.__len__()//10, 
-        shuffle=True, 
-        sampler=None,
+        shuffle=False, 
+        sampler=train_sampler,
         batch_sampler=None, 
         num_workers=4
     )
