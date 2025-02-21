@@ -1,3 +1,6 @@
+*.err
+*.out
+
 wandb/
 nn/
 runs/
